@@ -1,0 +1,12 @@
+{
+  "name": "boiler",
+  "version": "0.1.0",
+  "main": "src/server.js",
+  "author": "chrono <chrono@disilla.org>",
+  "license": "AGPL-3.0-only",
+  "private": true,
+  "dependencies": {
+    "@chronomly/katana": "^0.1.0",
+    "ws": "^8.12.0"
+  }
+}
