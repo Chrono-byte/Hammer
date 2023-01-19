@@ -97,12 +97,12 @@
           channelList.innerHTML = "";
 
           for (const channel in channelListData.channels) {
-			if (Object.hasOwnProperty.call(channelListData.channels, channel)) {
-				const element = channelListData.channels[channel];
-				
-				channelList.innerHTML += `<div>#${element}</div>`;
-			}
-		  }
+            if (Object.hasOwnProperty.call(channelListData.channels, channel)) {
+              const element = channelListData.channels[channel];
+
+              channelList.innerHTML += `<div>#${element}</div>`;
+            }
+          }
         };
         channelListRequest.send();
       }
@@ -144,7 +144,7 @@
 
             window.location.reload(false);
           }
-        }, 1000);
+        }, 2500);
 
         console.log("waiting for username");
       } else if (!firstRun) {
