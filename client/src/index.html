@@ -16,10 +16,11 @@
           placeholder="Host"
         />
         <button onclick="setHostFromField()">Set Host</button>
-        <div id="channel-list" class="flex-v"></div>
         <form id="channel-form">
-          <input type="text" id="channel-input" placeholder="Channel" />
+          <input autocomplete="off" type="text" id="channel-input" class="thingy" placeholder="Channel" />
+          <button onclick="createChannel(channelInput.value)">+</button>
         </form>
+        <div id="channel-list" class="flex-v"></div>
       </div>
 
       <div class="center">
@@ -31,7 +32,7 @@
               autocomplete="off"
               type="text"
               id="message-input"
-              placeholder="Message"
+              placeholder="Message..."
             />
             <!-- <button type="submit">Send</button> -->
           </div>
@@ -40,7 +41,7 @@
 
       <div class="right">
         <form id="username-form">
-          <input type="text" id="username-input" placeholder="Username" />
+          <input autocomplete="off" type="text" id="username-input" placeholder="Username" />
         </form>
         <div id="user-list" class="flex-v"></div>
       </div>
