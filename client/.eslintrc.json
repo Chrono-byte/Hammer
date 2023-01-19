@@ -5,23 +5,24 @@
 		"node": true
 	},
 	"extends": [
-		"eslint:recommended",
-		"plugin:json/recommended"
-
+		"eslint:recommended" //,
+		// "plugin:json/recommended"
 	],
 	"globals": {
 		"Atomics": "readonly",
 		"SharedArrayBuffer": "readonly"
 	},
-	"plugins": [
-	],
+	"plugins": [],
 	"parserOptions": {
 		"ecmaVersion": 2020
 	},
 	"rules": {
 		"indent": [
 			"error",
-			"tab"
+			"tab",
+			{
+				"SwitchCase": 1
+			}
 		],
 		"linebreak-style": [
 			"error",

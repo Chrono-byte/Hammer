@@ -37,4 +37,5 @@ Pull requests are welcome. For major changes, please open an issue first to disc
 Hammer uses different licenses for the server and client.
 
 `boiler`: is licensed under AGPL-3.0-only.
+
 `traincar`: is licensed under zLib with Aknowledgement.

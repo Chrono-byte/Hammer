@@ -6,12 +6,13 @@
   "author": "chrono <chrono@disilla.org>",
   "main": "src/server.js",
   "scripts": {
-    "lint": "eslint . --ext js,json",
-    "lint:fix": "eslint . --ext js,json --fix"
+    "lint": "eslint . --ext js",
+    "lint:fix": "eslint . --ext js"
   },
   "dependencies": {
     "cors": "^2.8.5",
     "express": "^4.18.2",
+    "jsonwebtoken": "^9.0.0",
     "ws": "^8.12.0"
   },
   "devDependencies": {

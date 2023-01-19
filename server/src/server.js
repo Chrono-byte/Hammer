@@ -236,46 +236,6 @@ app.delete("/api/channels/delete", (req, res) => {
 	res.send("Channel deleted " + channelName);
 });
 
-// route to get the number of users in a channel
-app.post("/api/channels/users/size", (req, res) => {
-	const channelName = req.query.channel;
-
-	if (!channelName) {
-		res.status(400).send("Channel name not provided");
-		return;
-	}
-
-	if (!channels.has(channelName)) {
-		res.status(400).send("Channel does not exist");
-		return;
-	}
-
-	const channel = channels.get(channelName);
-
-	res.send({ users: channel.size });
-});
-
-// route to get all the users in a channel
-app.post("/api/channels/users", (req, res) => {
-	const channelName = req.query.channel;
-
-	if (!channelName) {
-		res.status(400).send("Channel name not provided");
-		return;
-	}
-
-	if (!channels.has(channelName)) {
-		res.status(400).send("Channel does not exist");
-		return;
-	}
-
-	const channel = channels.get(channelName);
-
-	res.send({
-		users: [...channel.keys()],
-	});
-});
-
 // route to get a channel
 app.post("/api/channels/get", (req, res) => {
 	const channelName = req.query.channel;
@@ -295,130 +255,6 @@ app.post("/api/channels/get", (req, res) => {
 	res.send({
 		channel: channel,
 	});
-});
-
-// route to create a user
-app.post("/api/users/create", (req, res) => {
-	const username = req.query.username;
-	const password = req.query.password;
-
-	if (!username) {
-		res.status(400).send("Username not provided");
-		return;
-	}
-
-	if (!password) {
-		res.status(400).send("Password not provided");
-		return;
-	}
-
-	if (users.has(username)) {
-		res.status(409).send("Username already exists");
-		return;
-	}
-
-	// check if username is valid
-	if (!username.match(/^[a-z0-9]+$/)) {
-		res.status(406).send("Username must be lowercase and contain only letters and numbers");
-		return;
-	}
-
-	// check that the username does not contain the word null or undefined
-	if (username.includes("null") || username.includes("undefined")) {
-		if (username.includes("null"))
-			res.status(406).send("Username cannot contain the word 'null'");
-		if (username.includes("undefined"))
-			res.status(406).send("Username cannot contain the word 'undefined'");
-		return;
-	}
-
-	users.set(username, new Map());
-
-	// add the password to the user
-	users.get(username).set("password",	password);
-
-	// var user = users.get(username);
-
-	res.status(200).send({
-		message: "User created " + username,
-		user: username
-	});
-});
-
-// route to get all the users
-app.post("/api/users", (req, res) => {
-	res.send({
-		users: [...users.keys()],
-	});
-});
-
-// route to get number of users
-app.post("/api/users/size", (req, res) => {
-	res.send({ users: users.size });
-});
-
-// route to change a user's username
-app.post("/api/users/change", (req, res) => {
-	const oldUsername = req.query.oldUsername;
-	const newUsername = req.query.newUsername;
-
-	if (!oldUsername) {
-		res.status(400).send("Old username not provided");
-		return;
-	}
-
-	if (!newUsername) {
-		res.status(400).send("New username not provided");
-		return;
-	}
-
-	if (!users.has(oldUsername)) {
-		res.status(400).send("User does not exist");
-		return;
-	}
-
-	if (users.has(newUsername)) {
-		res.status(409).send("New username already exists");
-		return;
-	}
-
-	// check if username is valid
-	if (!newUsername.match(/^[a-z0-9]+$/)) {
-		res.status(406).send("Username must be lowercase and contain only letters and numbers");
-		return;
-	}
-
-	// check that the username does not contain the word null or undefined
-	if (newUsername.includes("null") || newUsername.includes("undefined")) {
-		if (newUsername.includes("null"))
-			res.status(406).send("Username cannot contain the word 'null'");
-		if (newUsername.includes("undefined"))
-			res.status(406).send("Username cannot contain the word 'undefined'");
-		return;
-	}
-
-	var user = users.get(oldUsername);
-
-	users.set(newUsername, user);
-
-	// var Nuser = users.get(newUsername);
-
-	res.status(200).send({
-		message: "User changed " + oldUsername + " to " + newUsername,
-		user: newUsername
-	});
-
-	// notify the user that their username has been changed
-	user.forEach((client) => {
-		client.send(assembleServerMessage(`Your username has been changed to '${newUsername}'`, "change"));
-	});
-
-	// notify the user that their username has been changed
-	user.forEach((client) => {
-		client.send(assembleServerMessage(`Your username has been changed to '${newUsername}'`, "change"));
-	});
-
-	users.delete(oldUsername);
 });
 
 // route to delete a user
@@ -496,7 +332,6 @@ app.post("/api/users/auth", (req, res) => {
 		user: username
 	});
 });
-
 
 setInterval(() => {
 	for (const [channelName, channel] of channels) {

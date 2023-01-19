@@ -6,9 +6,7 @@ var username;
 var socket;
 var inChannel = false;
 
-// get channel list
-const channelList = document.getElementById("channel-list");
-const userList = document.getElementById("user-list");
+
 
 function getChannelList() {
 	// get channel list from server
@@ -76,24 +74,7 @@ function sync() {
 }
 
 // get channel list every second
-setInterval(sync, 1000);
-
-// text input elements
-const chatWindow = document.getElementById("chat-window");
-const chatForm = document.getElementById("chat-form");
-const messageInput = document.getElementById("message-input");
-
-// username input elements
-const usernameInput = document.getElementById("username-input");
-const usernameForm = document.getElementById("username-form");
-
-// channel input elements
-const hostfield = document.getElementById("host-input");
-const channelInput = document.getElementById("channel-input");
-const channelForm = document.getElementById("channel-form");
-
-// check if username is set
-const firstRun = !usernameInput.value;
+// setInterval(sync, 1000);
 
 // Set host for the server, takes string as parameter
 function setHost(hostnameIn) {
@@ -104,14 +85,6 @@ function setHost(hostnameIn) {
 
 	// Log if the connection is successful
 	console.log("Connecting to server: " + hostname);
-}
-
-// append client message to chat window
-function appendMessage(message) {
-	const messageElement = document.createElement("div");
-	messageElement.innerHTML += `<div style="color: blue">${new Date().toLocaleTimeString()}: CLIENT: ${message}</div>`;
-
-	chatWindow.appendChild(messageElement);
 }
 
 // function to create a new channel
@@ -216,10 +189,7 @@ function joinChannel(channelName) {
 
 		chatWindow.appendChild(messageElement);
 
-		// scroll to bottom of chat window
 		chatWindow.scrollTop = chatWindow.scrollHeight;
-
-		// console.log(`Received message: ${message}`);
 	};
 
 	// Listen for connection open event
@@ -248,117 +218,6 @@ function leaveChannel() {
 
 	// set global channel variable
 	channel = null;
-}
-
-
-// listen for channel name submit
-channelForm.onsubmit = (event) => {
-	event.preventDefault();
-
-	// set channel variable
-	channel = channelInput.value;
-
-
-
-	// run join channel function
-	// joinChannel(channel);
-};
-
-chatForm.onsubmit = (event) => {
-	event.preventDefault();
-
-	// check if the message is a command
-	if (messageInput.value.startsWith("/")) {
-		// get the command
-		var cmd = messageInput.value.split(" ")[0];
-		// remove the /
-		cmd = cmd.slice(1);
-
-		// get the arguments
-		var args = messageInput.value.split(" ").slice(1);
-
-		// check the command
-		switch (cmd) {
-			case "create":
-				// run create channel function
-				createChannel(args[0]);
-				break;
-			case "join":
-				// run join channel function
-				joinChannel(args[0]);
-				break;
-			case "leave":
-				if (socket != null && inChannel && channel != null) {
-					leaveChannel();
-				}
-				break;
-			case "delete":
-				// run delete channel function
-				deleteChannel(args[0]);
-				break;
-			case "help":
-				// send help message to chat window
-				chatWindow.innerHTML += "<div style=\"color: purple\">All Commands:</div>";
-				chatWindow.innerHTML += "<div style=\"color: purple\">    /create - create a new channel</div>";
-				chatWindow.innerHTML += "<div style=\"color: purple\">    /join [channel] - join a channel</div>";
-				chatWindow.innerHTML += "<div style=\"color: purple\">    /leave - leave the current channel</div>";
-				chatWindow.innerHTML += "<div style=\"color: purple\">    /help - show this message</div>";
-				break;
-			default:
-				// send client message to chat window
-				appendMessage("Unknown command");
-				break;
-		} // end switch
-
-		messageInput.value = "";
-
-		return;
-	}
-
-	// checkl if channel is set
-	if (!channel) {
-		// log an error message to the chat window
-		chatWindow.innerHTML += "<div style=\"color: red\">Please enter a channel</div>";
-		return;
-	}
-
-	// check that the message and username are not empty
-	if (!messageInput.value || !usernameInput.value) {
-		// log an error message to the chat window
-		chatWindow.innerHTML += "<div style=\"color: red\">Please enter a message</div>";
-		return;
-	}
-
-	// send message to server
-	const message = messageInput.value;
-	socket.send(message);
-	messageInput.value = "";
-};
-
-if (firstRun) {
-	chatWindow.innerHTML += "<div style=\"color: red\">enter username<div>";
-
-	// handle username input
-	usernameForm.onsubmit = (event) => {
-		event.preventDefault();
-
-		// set username box to readonly
-		usernameInput.readOnly = true;
-
-		// set global username variable
-		username = usernameInput.value;
-
-		// output username to chat window
-		chatWindow.innerHTML += `<div style="color: green">Username set to ${usernameInput.value}</div>`;
-	};
-
-	console.log("waiting for username");
-} else if (!firstRun) {
-	// set username box to readonly
-	usernameInput.readOnly = true;
-
-	// output username to chat window
-	chatWindow.innerHTML += `<div style="color: green">Username set to ${usernameInput.value}</div>`;
 }
 
 // Connect to the server
