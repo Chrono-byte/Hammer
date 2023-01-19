@@ -90,7 +90,7 @@
         const channelListRequest = new XMLHttpRequest();
         channelListRequest.open(
           "GET",
-          "http://localhost:8081/api/channels",
+          `http://${hostname}:8081/api/channels`,
           true
         );
         channelListRequest.onload = function () {
