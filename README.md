@@ -4,7 +4,7 @@ Hammer is a simple WebSocket-based chat server & client written in JavaScript.
 
 This mono-repo contains both the server and client portions of Hammer.
 
-`boiler` is the chat server implementing all server-side chat and UAC `user account control` commands.
+`boiler` is the chat server implementing all server-side API and WS chat functionalities.
 
 `traincar` is the web-based client. Currently it is raw HTML and JavaScript, no fancy libraries.
 
