@@ -67,17 +67,21 @@
   </head>
 
   <body>
-    <!-- channel list -->
     <div id="channel-list"></div>
     <div id="chat-window"></div>
     <input type="text" id="username-input" placeholder="Username" />
     <input type="text" id="channel-input" placeholder="Channel" />
+
+    <input type="text" id="host-input" placeholder="Host" />
+    <button onclick="setHostFromField()">Set Host</button>
     <form id="chat-form">
       <input type="text" id="message-input" placeholder="Message" />
       <button type="submit">Send</button>
     </form>
 
     <script>
+      var hostname = "localhost";
+
       // get channel list
       const channelList = document.getElementById("channel-list");
 
@@ -108,9 +112,8 @@
       }
 
       setInterval(getChannelList, 1000);
-    </script>
 
-    <script>
+      var socket;
       const chatWindow = document.getElementById("chat-window");
       const chatForm = document.getElementById("chat-form");
       const messageInput = document.getElementById("message-input");
@@ -119,6 +122,28 @@
 
       // check if username is set
       const firstRun = !usernameInput.value;
+
+      function setHostFromField() {
+        var hostfield = document.getElementById("host-input").value;
+
+        console.log(hostfield)
+
+        // Connect to the server
+        setHost(hostfield);
+      }
+      
+      // Set host for the server, takes string as parameter
+      function setHost(hostnameIn) {
+        hostname = hostnameIn;
+
+        // Connect to the server
+        socket = new WebSocket(
+          `ws://${hostnameIn}:8080?channel=${channelInput.value}&username=${usernameInput.value}`
+        );
+
+        // Log if the connection is successful
+        console.log("Connecting to server: " + hostname);
+      }
 
       chatForm.onsubmit = (event) => {
         event.preventDefault();
@@ -155,10 +180,7 @@
         chatWindow.innerHTML += `<div style="color: green">Username set to ${usernameInput.value}</div>`;
       }
 
-      // Connect to the server
-      const socket = new WebSocket(
-        `ws://localhost:8080?channel=${channelInput.value}&username=${usernameInput.value}`
-      );
+      setHost(hostname);
 
       // Log that we're connected
       console.log("Connected to server");
