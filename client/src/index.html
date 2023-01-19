@@ -1,0 +1,189 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <style>
+      body {
+        font-family: "Comic Mono";
+      }
+
+      #channel-list {
+        height: 400px;
+        overflow-y: scroll;
+        border: 1px solid #ccc;
+        padding: 10px;
+      }
+
+      #chat-window {
+        height: 400px;
+        overflow-y: scroll;
+        border: 1px solid #ccc;
+        padding: 10px;
+      }
+
+      #chat-form {
+        display: flex;
+        align-items: center;
+      }
+
+      #message-input {
+        flex: 1;
+        padding: 10px;
+        border: 1px solid #ccc;
+        border-radius: 4px;
+      }
+
+      #chat-form button {
+        padding: 10px;
+        border: 1px solid #ccc;
+        border-radius: 4px;
+        margin-left: 10px;
+        cursor: pointer;
+      }
+
+      #chat-form button:hover {
+        background-color: #ccc;
+      }
+
+      #username-input {
+        padding: 10px;
+        border: 1px solid #ccc;
+        border-radius: 4px;
+        margin-right: 10px;
+      }
+
+      #channel-input {
+        padding: 10px;
+        border: 1px solid #ccc;
+        border-radius: 4px;
+        margin-right: 10px;
+      }
+
+      #chat-form input:focus {
+        outline: none;
+      }
+    </style>
+
+    <title>hammer chat</title>
+  </head>
+
+  <body>
+    <!-- channel list -->
+    <div id="channel-list"></div>
+    <div id="chat-window"></div>
+    <input type="text" id="username-input" placeholder="Username" />
+    <input type="text" id="channel-input" placeholder="Channel" />
+    <form id="chat-form">
+      <input type="text" id="message-input" placeholder="Message" />
+      <button type="submit">Send</button>
+    </form>
+
+    <script>
+      // get channel list
+      const channelList = document.getElementById("channel-list");
+
+      function getChannelList() {
+        // get channel list from server
+        const channelListRequest = new XMLHttpRequest();
+        channelListRequest.open(
+          "GET",
+          "http://localhost:8081/api/channels",
+          true
+        );
+        channelListRequest.onload = function () {
+          const channelListData = JSON.parse(this.response);
+
+          console.log(channelListData);
+
+          channelList.innerHTML = "";
+
+          for (const channel in channelListData.channels) {
+			if (Object.hasOwnProperty.call(channelListData.channels, channel)) {
+				const element = channelListData.channels[channel];
+				
+				channelList.innerHTML += `<div>#${element}</div>`;
+			}
+		  }
+        };
+        channelListRequest.send();
+      }
+
+      setInterval(getChannelList, 1000);
+    </script>
+
+    <script>
+      const chatWindow = document.getElementById("chat-window");
+      const chatForm = document.getElementById("chat-form");
+      const messageInput = document.getElementById("message-input");
+      const usernameInput = document.getElementById("username-input");
+      const channelInput = document.getElementById("channel-input");
+
+      // check if username is set
+      const firstRun = !usernameInput.value;
+
+      chatForm.onsubmit = (event) => {
+        event.preventDefault();
+
+        // check that the message and username are not empty
+        if (!messageInput.value || !usernameInput.value) {
+          // log an error message to the chat window
+          chatWindow.innerHTML += `<div style="color: red">Please enter a message</div>`;
+          return;
+        }
+
+        const message = messageInput.value;
+        socket.send(message);
+        messageInput.value = "";
+      };
+
+      if (firstRun) {
+        chatWindow.innerHTML += `<div style="color: red">enter username (type fast)	</div>`;
+
+        setInterval(() => {
+          if (usernameInput.value) {
+            chatWindow.innerHTML += `<div style="color: green">Username set to ${usernameInput.value}</div>`;
+
+            window.location.reload(false);
+          }
+        }, 1000);
+
+        console.log("waiting for username");
+      } else if (!firstRun) {
+        // set username box to readonly
+        usernameInput.readOnly = true;
+
+        // output username to chat window
+        chatWindow.innerHTML += `<div style="color: green">Username set to ${usernameInput.value}</div>`;
+      }
+
+      // Connect to the server
+      const socket = new WebSocket(
+        `ws://localhost:8080?channel=${channelInput.value}&username=${usernameInput.value}`
+      );
+
+      // Log that we're connected
+      console.log("Connected to server");
+
+      // Listen for messages from the server
+      socket.onmessage = async (event) => {
+        const message = await event.data;
+        const messageElement = document.createElement("div");
+        messageElement.innerText = message;
+        chatWindow.appendChild(messageElement);
+
+        console.log(event.data);
+
+        console.log(`Received message: ${message}`);
+      };
+
+      // Listen for connection open event
+      socket.onopen = () => {
+        console.log("Connected to server");
+      };
+
+      // Listen for connection close event
+      socket.onclose = () => {
+        console.log("Disconnected from server");
+      };
+    </script>
+  </body>
+</html>
