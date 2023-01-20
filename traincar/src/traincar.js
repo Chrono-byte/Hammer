@@ -1,41 +1,51 @@
-exports = TrainCar;
+/*
+	Copyright (c) 2023 Michael Gummere
+	All rights reserved.
+	Redistribution and use in source and binary forms governed under the terms of the zlib/libpng License with Acknowledgement license.
+*/
+
 const { WebSocket } = require("ws");
 const { EventEmitter } = require("events");
 
 // hammer client
-class TrainCar extends EventEmitter {
-	constructor(token, host, port) {
-		this.token = token;
+class Traincar extends EventEmitter {
+	constructor(host, port) {
+		super();
+
+		this.host = host;
+		this.port = port;
 
 		this.channels = new Map();
 		this.users = new Map();
 	}
 
 	login(token) {
-		this.socket = new WebSocket(`ws://${host}:${port}?token=${token}`);
+		console.log(`ws://${this.host}:${this.port}?token=${token}`)
+
+		this.socket = new WebSocket(`ws://${this.host}:${this.port}?token=${token}`);
 
 		// once the socket is open, emit the ready event
 		this.socket.onopen = () => {
 			// go through all the channels the user is a member of and join them
-
+			
 
 			// go through all the users the user is a member of and join them
 
 
 			this.emit("ready");
-		}
+		};
 	}
 
 	joinChannel(channel) {
 		try {
 			// Join channel
-			this.channels.set(channel, new WebSocket(`ws://${hostname}:8080?channel=${channel}&username=${usernameInput.value}`));
+			
 		} catch {
 			throw new Error("Could not connect to channel");
 		}
 
 		// Listen for messages from the server
-		socket.onmessage = (event) => {
+		this.socket.onmessage = (event) => {
 			const { message, timestamp, author, type } = JSON.parse(event.data);
 
 			// emit event to client
@@ -99,3 +109,5 @@ class TrainCar extends EventEmitter {
 		channelCreateRequest.send();
 	}
 }
+
+module.exports = { Traincar };

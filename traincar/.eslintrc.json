@@ -13,8 +13,8 @@
 		"Atomics": "readonly",
 		"SharedArrayBuffer": "readonly"
 	},
-	"plugins": [
-	],
+	"plugins": [],
+	"sourceType": "module",
 	"parserOptions": {
 		"ecmaVersion": 2020
 	},
