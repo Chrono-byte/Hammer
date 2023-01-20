@@ -6,6 +6,7 @@
 
 const { WebSocket } = require("ws");
 const { EventEmitter } = require("events");
+var XMLHttpRequest = require("xmlhttprequest").XMLHttpRequest;
 
 // hammer client
 class Traincar extends EventEmitter {
@@ -20,36 +21,52 @@ class Traincar extends EventEmitter {
 	}
 
 	login(token) {
-		console.log(`ws://${this.host}:${this.port}?token=${token}`)
+		// console.log(`ws://${this.host}:${this.port}?token=${token}`)
 
 		this.socket = new WebSocket(`ws://${this.host}:${this.port}?token=${token}`);
 
 		// once the socket is open, emit the ready event
 		this.socket.onopen = () => {
-			// go through all the channels the user is a member of and join them
-			
-
-			// go through all the users the user is a member of and join them
-
-
 			this.emit("ready");
 		};
+
+		// when socket is closed, emit the close event
+		this.socket.onclose = () => {
+			this.emit("logout");
+		}
+
+		this.on("logout", () => {
+			process.exit(0);
+		});
 	}
 
 	joinChannel(channel) {
-		try {
-			// Join channel
-			
-		} catch {
-			throw new Error("Could not connect to channel");
+		// Join channel
+		const channelJoinRequest = new XMLHttpRequest();
+		channelJoinRequest.open(
+			"PUT",
+			`http://${this.host}:${this.port}/api/channels/join?channel=${channel}&token=${this.token}`,
+			true
+		);
+		channelJoinRequest.onreadystatechange = function () {
+			if (this.readyState == 4 && this.status == 200) {
+				const channelJoinData = JSON.parse(this.response);
+
+				// emit join event to client
+				this.emit("joinChannel", channelJoinData);
+			}
 		}
+		channelJoinRequest.send();
 
 		// Listen for messages from the server
 		this.socket.onmessage = (event) => {
-			const { message, timestamp, author, type } = JSON.parse(event.data);
-
-			// emit event to client
-			this.emit("message", { message, timestamp, author, type });
+			try {
+				const { message, timestamp, author, type } = JSON.parse(event.data);
+				// emit event to client
+				this.emit("message", { text: message, timestamp, author, type });
+			} catch {
+				// throw new Error("Could not parse message");
+			}
 		};
 	}
 
@@ -62,7 +79,7 @@ class Traincar extends EventEmitter {
 		const channelDeleteRequest = new XMLHttpRequest();
 		channelDeleteRequest.open(
 			"DELETE",
-			`http://${hostname}:8081/api/channels/delete?channel=${channelName}`,
+			`http://${this.host}:${this.port}/api/channels/delete?channel=${channelName}`,
 			true
 		);
 		channelDeleteRequest.onload = function () {

@@ -363,3 +363,7 @@ if (firstRun) {
 
 // Connect to the server
 setHost(hostname);
+
+// create & join a new channel 
+createChannel("general");
+joinChannel("general");
