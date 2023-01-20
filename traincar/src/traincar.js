@@ -92,7 +92,7 @@ class Traincar extends EventEmitter {
 	}
 
 	sendMessage(channel, message) {
-
+		
 	}
 
 	createChannel(channel) {

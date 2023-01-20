@@ -119,39 +119,8 @@ function createChannel(channelName, channelID) {
     return true;
 }
 
-function checkUserAuth(token) {
-    // check that the connection is an authorized user
-    var auth = false
-    users.forEach((x) => {
-        if (x.token != token) {
-            return;
-        }
-
-        // user is authorized
-        return auth = true;
-    })
-
-    if (auth == false) {
-        return false;
-    }
-}
-
-function getUserFromToken(token) {
-    // check that the connection is an authorized user
-    var auth = false
-    users.forEach((x) => {
-        if (x.token != token) {
-            return;
-        }
-
-        // user is authorized
-        return x;
-    })
-
-    if (auth == false) {
-        return false;
-    }
-}
+getUserFromToken = (token) => [...users.values()].find((e) => e.token == token)
+checkUserAuth = (token) => getUserFromToken(token) != null
 
 class snowflakeGen {
     generateSnowflake() {
