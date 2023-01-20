@@ -1,20 +1,21 @@
 // servers
 const { Server, WebSocket } = require("ws");
 const express = require("express");
-
-// enviornment settings
-const { env } = process;
-env.JWT_SECRET = "Once upon a midnight dreary, while I pondered, weak and weary";
-env.BOILER_CONFIG = "server-config.json";
+const cors = require("cors");
+const { exists, readFile, existsSync, readFileSync, fstat, writeFile } = require("fs");
+const path = require("path");
 
 // prompt the user for the port
 const port = process.argv[2] || 8080;
 
 // import deps for other things, CORS and JWT
-const cors = require("cors");
 const jwt = require("jsonwebtoken");
-const { exists, readFile, existsSync, readFileSync, fstat, writeFile } = require("fs");
-const path = require("path");
+const { env } = process;
+env.JWT_SECRET = "Once upon a midnight dreary, while I pondered, weak and weary";
+
+// bcrypt junk
+const bcrypt = require('bcrypt');
+const saltRounds = 10;
 
 // create a new websocket server
 const wss = new Server({ port: port });
@@ -22,13 +23,18 @@ const app = express();
 
 // allow CORS
 app.use(cors({ origin: true, credentials: true }));
+app.use(express.json());
 
 // initialize data structures
 const channels = new Map();
 const users = new Map();
 
+// import internal deps
+const { snowflakeGen } = require("./util/snowflake");
+
 // server info 
 // MOTD, etc
+env.BOILER_CONFIG = "server-config.json";
 const config_local = path.join(__dirname, env.BOILER_CONFIG);
 
 var serverConfig;
@@ -51,52 +57,90 @@ if (existsSync(config_local)) {
 //     });
 // })
 
-// set the "admin" user, make them an admin
-users.set("admin", {
-    username: "admin",
-    token: jwt.sign({
-        username: "admin",
-        password: "Once upon a midnight dreary, while I pondered, weak and weary",
-        permissions: {
-            admin: true,
-            createChannel: true,
-            deleteChannel: true,
-            joinChannel: true,
-            leaveChannel: true,
-            sendMessage: true
+// function to generate static token
+function generateToken(username, permissions) {
+    return jwt.sign({ username: username, permissions: permissions }, env.JWT_SECRET);
+}
+
+// function to check if a password is correct
+function checkPassword(password, hash) {
+    // check if the password is correct
+    bcrypt.compare(password, hash, function (err, result) {
+        if (err) {
+            console.log(err);
         }
-    }, env.JWT_SECRET)
+
+        // return the result
+        return result;
+    });
+}
+
+// function to assemble user and store the user in database, then encrypt the password and store it
+async function assembleUser(username, password, permissions) {
+    // assemble the user
+    let user = {
+        username: username,
+        id: snowflakeGen.createUserID(),
+        password: password,
+        permissions: permissions
+    };
+
+    // store the user
+    users.set(username, user);
+
+    await bcrypt.hash(password, saltRounds).then(function (hash) {
+        // Store hash in your password DB.
+        user.password = hash;
+
+        // log the user
+        console.log(user);
+
+        return;
+    });
+}
+
+assembleUser("admin", "password", {
+    admin: true
 });
 
-// override admin token
-// users.get("admin").token = "token";
-
-// log admin's token
-console.log(users.get("admin").token);
+/* example of a user
+{
+    username: "username",
+    id: snowflakeGen.createUserID(),
+    password: encryptPassword("password"),
+    permissions: {
+        admin: false,
+        canCreateChannels: true,
+        canDeleteChannels: true,
+        canBanUsers: false,
+        canKickUsers: false,
+        canChangePermissions: false,
+        canChangeNickname: false
+    }
+}
+*/
 
 // assemble message from "Server" to send to client
 function assembleServerMessage(message, type) {
-    if (type == "server" || type == "error") {
-        return JSON.stringify({
-            timestamp: new Date().getTime(),
-            author: "Server",
-            message: message,
-            type: "server"
-        });
-    } else if (type == "join") {
-        return JSON.stringify({
-            timestamp: new Date().getTime(),
-            author: "Server",
-            message: message,
-            type: "join"
-        });
+    return JSON.stringify({
+        timestamp: new Date().getTime(),
+        id: snowflakeGen.createMessageID(),
+        author: "Server",
+        content: message,
+        type: "user"
+    });
+}
 
-    } else if (type == "leave") {
+// assemble message from other user to send to client
+function assembleUserMessage(message, author, type, channel) {
+    if (type == "user") {
         return JSON.stringify({
             timestamp: new Date().getTime(),
-            author: "Server",
-            message: message,
-            type: "leave"
+            id: snowflakeGen.createMessageID(),
+            author: author,
+            content: message,
+            type: "user",
+            channel: channel
         });
     }
 }
@@ -119,47 +163,8 @@ function createChannel(channelName, channelID) {
     return true;
 }
 
-getUserFromToken = (token) => [...users.values()].find((e) => e.token == token)
-checkUserAuth = (token) => getUserFromToken(token) != null
-
-class snowflakeGen {
-    generateSnowflake() {
-        // Get current timestamp in milliseconds
-        var timestamp = Date.now();
-
-        // Generate a random number between 0 and 1023
-        var random = Math.floor(Math.random() * 1024);
-
-        // Concatenate timestamp and random number
-        var snowflake = timestamp + random;
-
-        // Return the snowflake ID
-        return snowflake;
-    }
-
-
-    // function to create channel snowflake ID
-    createChannelID() {
-        let seed = this.generateSnowflake();
-
-        // generate a random number between 0 and 1023
-        let random = Math.floor(Math.random() * 1024);
-
-        // concatenate seed and random number
-        let snowflake = seed + random;
-    }
-
-    // function to create user snowflake ID
-    createUserID() {
-        let seed = this.generateSnowflake();
-
-        // generate a random number between 0 and 1023
-        let random = Math.floor(Math.random() * 2048);
-
-        // concatenate seed and random number
-        let snowflake = seed + random;
-    }
-}
+var getUserFromToken = (token) => [...users.values()].find((e) => e.token == token);
+var checkUserAuth = (token) => getUserFromToken(token) != null;
 
 // listen for connections
 wss.on("connection", (ws, req) => {
@@ -170,14 +175,21 @@ wss.on("connection", (ws, req) => {
     const auth = checkUserAuth(token);
     var username;
 
+    if (auth == false) {
+        ws.send(401);
+
+        ws.close();
+        return;
+    } else {
+        ws.send("Authorized");
+    }
+
     // get the username from the token
     try {
         username = jwt.verify(token, env.JWT_SECRET).username;
     } catch (err) {
         // set username to "Unknown"
         username = "Unknown";
-
-        // console.log(err);
     }
 
     // attach connected status to user
@@ -193,17 +205,35 @@ wss.on("connection", (ws, req) => {
     // send the client a message to let them know they are connected
     ws.send(assembleServerMessage(`Welcome to #${serverConfig.server_name}, ${username}!`, "server"));
 
-    if (auth == false) {
-        ws.send("Unauthorized");
-
-        ws.close();
-        return;
-    } else {
-        ws.send("Authorized");
-    }
+    ws.send(assembleServerMessage(`${serverConfig.motd}`, "motd"));
 
     ws.on("message", (message) => {
-        message = message.toString();
+        // check that the message is an object
+        if (typeof message != "object") {
+            ws.send(assembleServerMessage("Message is not an object, check connection.", "error"));
+            return;
+        }
+
+        // check that the message has a type
+        if (!message.type) {
+            ws.send(assembleServerMessage("Message does not have a type, check connection.", "error"));
+            return;
+        }
+
+        // check that the message has a channel
+        if (!message.channel) {
+            ws.send(assembleServerMessage("Message does not have a channel, I can't send it to a non-existent channel!", "error"));
+            return;
+        }
+
+        // check that the message has content
+        if (!message.content || message.content == "") {
+            ws.send(assembleServerMessage("Message does not have content, I can't send an empty message!", "error"));
+            return;
+        }
+
+        var channelName = message.channel;
+        var channel = channels.get(channelName);
 
         // check that the channel still exists
         if (!channels.has(channelName)) {
@@ -220,7 +250,7 @@ wss.on("connection", (ws, req) => {
 
             channel.forEach((client) => {
                 if (client.readyState === WebSocket.OPEN) {
-                    client.send(assembleClientMessage(message, username));
+                    client.send(assembleUserMessage(message, username, "user", channelName));
                 }
             });
         }
@@ -263,11 +293,21 @@ app.post("/api/users/create", (req, res) => {
     // create user
     users.set(username, {
         username: username,
-        token: jwt.sign({ username: username, password: password }, env.JWT_SECRET),
+        id: snowflakeGen.createUserID(),
+        password: encryptPassword(password),
+        permissions: {
+            admin: false,
+            canCreateChannels: true,
+            canDeleteChannels: true,
+            canBanUsers: false,
+            canKickUsers: false,
+            canChangePermissions: false,
+            canChangeNickname: false
+        }
     });
 
-    // send token
-    res.status(200).send(users.get(username).token);
+    // send confirmation
+    res.status(200).send("User created");
 });
 
 // route login
@@ -276,20 +316,45 @@ app.post("/api/users/login", (req, res) => {
     const username = req.query.username;
     const password = req.query.password;
 
+    // check that the username and password have been provided
+    if (username == undefined || password == undefined) {
+        res.status(422).send("Username and password must be provided");
+        return;
+    }
+
     // check if user exists
     if (!users.has(username)) {
-        res.status(400).send("User does not exist");
+        res.status(422).send("User does not exist");
+        return;
+    }
+
+    // check that the user has a hashed password
+    if (users.get(username).password == undefined) {
+        // log user object
+        console.log(users.get(username));
+
+        res.status(500).send("User improper");
         return;
     }
 
     // check if password is correct
-    if (jwt.sign({ username: username, password: password }, env.JWT_SECRET) == users.get(username).token) {
-        res.status(400).send("Incorrect password");
+    if (checkPassword(password, users.get(username).password) == false) {
+        res.status(403).send("Refused");
         return;
     }
 
+    // get user object
+    const user = users.get(username);
+
+    const token = generateToken(user.username, user.permissions)
+
+    // generate token
+    users.get(username).token = token;
+
+    console.log(token);
+
     // send token
-    res.status(200).send(users.get(username).token);
+    res.status(200).send({token});
 });
 
 // route to promote user to admin
@@ -358,7 +423,8 @@ app.post("/api/channels/create", (req, res) => {
     // create channel
     channels.set(channelName, {
         name: channelName,
-        messages: [],
+        messages: new Map(),
+        users: new Map()
     });
 
     // send channel
@@ -367,32 +433,35 @@ app.post("/api/channels/create", (req, res) => {
 
 // route to join a channel
 app.put("/api/channels/join", (req, res) => {
-	const channelName = req.query.channel;
-	const token = req.query.token;
+    const channelName = req.query.channel;
+    const token = req.query.token;
 
-	// check that the user is authenticated
-	if (!token) {
-		res.status(401).send("User not authenticated");
-		return;
-	}
+    var auth = checkUserAuth(token);
 
-	// check that the channel name was provided
-	if (!channelName) {
-		res.status(400).send("Channel name not provided");
-		return;
-	}
+    if (!auth) {
+        res.status(400).send("Invalid token");
+        return;
+    }
 
-	if (!channels.has(channelName)) {
-		res.status(400).send("Channel does not exist");
-		return;
-	}
+    // check that the channel name was provided
+    if (!channelName) {
+        res.status(400).send("Channel name not provided");
+        return;
+    }
 
-	const channel = channels.get(channelName);
+    if (!channels.has(channelName)) {
+        res.status(400).send("Channel does not exist");
+        return;
+    }
 
-	res.send({
-		channel: channel
-	});
+    const channel = channels.get(channelName);
+    const user = getUserFromToken(token);
+
+    res.send(channel);
 });
+
+// route to get user info
+app.get("/api/users/", (req, res) => {});
 
 var listener = app.listen(`${new Number(port) + 1}`, function () {
     console.log("Server Functions API is listening on port http://localhost:" + listener.address().port);

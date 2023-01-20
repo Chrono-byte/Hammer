@@ -9,7 +9,7 @@ const { EventEmitter } = require("events");
 var XMLHttpRequest = require("xmlhttprequest").XMLHttpRequest;
 
 // hammer client
-class Traincar extends EventEmitter {
+class Client extends EventEmitter {
 	constructor(host, port) {
 		super();
 
@@ -20,23 +20,50 @@ class Traincar extends EventEmitter {
 		this.users = new Map();
 	}
 
-	login(token) {
-		// console.log(`ws://${this.host}:${this.port}?token=${token}`)
+	login(username, password) {
+		fetch(`http://${this.host}:${this.port + 1}/api/users/login?username=${username}&password=${password}`, {
+			method: 'POST',
+			headers: {
+				'Content-Type': 'application/json'
+			}
+		}).then(response => {
+			if (response.status === 401) {
+				console.log("Invalid username or password");
+			} else if (response.status === 200) {
+				return response.json();
+			}
+		}).then(data => {
+			this.token = data.token;
 
-		this.socket = new WebSocket(`ws://${this.host}:${this.port}?token=${token}`);
+			// set username, id
+			this.username = data.username;
+			this.id = data.id;
 
-		// once the socket is open, emit the ready event
-		this.socket.onopen = () => {
-			this.emit("ready");
-		};
+			// connect to websocket
+			this.emit("login");
+		}).catch(error => {
+			console.log(error);
+		});
 
-		// when socket is closed, emit the close event
-		this.socket.onclose = () => {
-			this.emit("logout");
-		}
 
-		this.on("logout", () => {
-			process.exit(0);
+		this.on("login", () => {
+			// connect to websocket
+			this.socket = new WebSocket(`ws://${this.host}:${this.port}?token=${this.token}`);
+
+			// once the socket is open, emit the ready event
+			this.socket.onopen = (event) => {
+				this.emit("ready");
+			};
+
+			// when socket is closed, emit the close event
+			this.socket.onclose = () => {
+				this.emit("logout");
+			}
+
+			// handle conection errors
+			this.socket.onerror = (error) => {
+				console.log(`WebSocket error: ${error.message}`);
+			}
 		});
 	}
 
@@ -60,10 +87,20 @@ class Traincar extends EventEmitter {
 
 		// Listen for messages from the server
 		this.socket.onmessage = (event) => {
+
 			try {
-				const { message, timestamp, author, type } = JSON.parse(event.data);
+				var message = JSON.parse(event.data);
+
+				// message = {
+				// 	content: message,
+				// 	timestamp: timestamp,
+				// 	author: author,
+				// 	type: type,
+				// 	id: id
+				// }
+
 				// emit event to client
-				this.emit("message", { text: message, timestamp, author, type });
+				this.emit("message", message);
 			} catch {
 				// throw new Error("Could not parse message");
 			}
@@ -92,7 +129,7 @@ class Traincar extends EventEmitter {
 	}
 
 	sendMessage(channel, message) {
-		
+
 	}
 
 	createChannel(channel) {
@@ -127,4 +164,4 @@ class Traincar extends EventEmitter {
 	}
 }
 
-module.exports = { Traincar };
+module.exports = { Client };
