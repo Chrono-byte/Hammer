@@ -6,12 +6,8 @@ client.on("message", (message) => {
 })
 
 client.on('ready', () => {
-    console.log("Ready!");
-
     // log our username and id
     console.log(`Logged in as ${client.username} (${client.id})`);
-
-    client.joinChannel("general");
 });
 
 client.on("joinChannel", (channel) => {

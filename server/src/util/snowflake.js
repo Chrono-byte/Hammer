@@ -15,6 +15,7 @@ let snowflakeGen = {
 
     // function to create message snowflake ID
     createMessageID() {
+        // generate seed snowflake
         let seed = this.generateSnowflake();
 
         // generate a random number between 0 and 1023
@@ -29,6 +30,7 @@ let snowflakeGen = {
 
     // function to create channel snowflake ID
     createChannelID() {
+        // generate seed snowflake
         let seed = this.generateSnowflake();
 
         // generate a random number between 0 and 1023
@@ -43,6 +45,7 @@ let snowflakeGen = {
 
     // function to create user snowflake ID
     createUserID() {
+        // generate seed snowflake
         let seed = this.generateSnowflake();
 
         // generate a random number between 0 and 1023

@@ -4,4 +4,8 @@ class Message {
     this.author = author;
     this.channel = channel;
   }
+
+  reply(message) {
+    this.channel.send(message);
+  }
 }

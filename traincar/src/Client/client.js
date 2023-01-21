@@ -6,8 +6,6 @@
 
 const { WebSocket } = require("ws");
 const { EventEmitter } = require("events");
-var XMLHttpRequest = require("xmlhttprequest").XMLHttpRequest;
-
 // hammer client
 class Client extends EventEmitter {
 	constructor(host, port) {
@@ -35,7 +33,7 @@ class Client extends EventEmitter {
 		}).then(data => {
 			this.token = data.token;
 
-			// set username, id
+			// set username and id
 			this.username = data.username;
 			this.id = data.id;
 
@@ -48,11 +46,18 @@ class Client extends EventEmitter {
 
 		this.on("login", () => {
 			// connect to websocket
-			this.socket = new WebSocket(`ws://${this.host}:${this.port}?token=${this.token}`);
+			try {
+				// connect to websocket
+				this.socket = new WebSocket(`ws://${this.host}:${this.port}?token=${this.token}`);
+			} catch {
+				console.log("Failed to connect to server");
+				// emit the logout event
+				this.emit("logout");
+			}
 
 			// once the socket is open, emit the ready event
 			this.socket.onopen = (event) => {
-				this.emit("ready");
+				// WIP
 			};
 
 			// when socket is closed, emit the close event
@@ -64,47 +69,93 @@ class Client extends EventEmitter {
 			this.socket.onerror = (error) => {
 				console.log(`WebSocket error: ${error.message}`);
 			}
+
+			// Listen for messages from the server
+			this.socket.onmessage = (event) => {
+				let message;
+
+				try {
+					message = JSON.parse(event.data);
+				} catch {
+					// throw new Error("Could not parse message");
+				}
+
+				switch (message.type) {
+					case "payload":
+						if (message.content == "Authorized") {
+							this.socket.send(JSON.stringify({
+								version: 1,
+								type: "payload"
+							}))
+
+							// emit the ready event
+							this.emit("ready");
+						}
+						break;
+					case "heartbeat":
+						this.emit("heartbeat", message);
+						break;
+					case "message":
+						this.emit("message", message);
+						break;
+					case "joinChannel":
+						this.emit("joinChannel", message);
+						break;
+					case "leaveChannel":
+						this.emit("leaveChannel", message);
+						break;
+					case "deleteChannel":
+						this.emit("deleteChannel", message);
+						break;
+					case "createChannel":
+						this.emit("createChannel", message);
+						break;
+					case "updateChannel":
+						this.emit("updateChannel", message);
+						break;
+					case "updateUser":
+						this.emit("updateUser", message);
+						break;
+					case "deleteUser":
+						this.emit("deleteUser", message);
+						break;
+					case "createUser":
+						this.emit("createUser", message);
+						break;
+					case "updateUser":
+						this.emit("updateUser", message);
+						break;
+					default:
+						console.log(`Unknown message type from server, most likely a bug or an unimplemented feature ${message.type}`);
+						break;
+				}
+			};
 		});
 	}
 
-	joinChannel(channel) {
-		// Join channel
-		const channelJoinRequest = new XMLHttpRequest();
-		channelJoinRequest.open(
-			"PUT",
-			`http://${this.host}:${this.port}/api/channels/join?channel=${channel}&token=${this.token}`,
-			true
-		);
-		channelJoinRequest.onreadystatechange = function () {
-			if (this.readyState == 4 && this.status == 200) {
-				const channelJoinData = JSON.parse(this.response);
-
-				// emit join event to client
-				this.emit("joinChannel", channelJoinData);
-			}
+	logout() {
+		try {
+			this.socket.close();
+		} catch {
+			console.log("Not connected to a server");
 		}
-		channelJoinRequest.send();
+	}
 
-		// Listen for messages from the server
-		this.socket.onmessage = (event) => {
-
-			try {
-				var message = JSON.parse(event.data);
-
-				// message = {
-				// 	content: message,
-				// 	timestamp: timestamp,
-				// 	author: author,
-				// 	type: type,
-				// 	id: id
-				// }
-
-				// emit event to client
-				this.emit("message", message);
-			} catch {
-				// throw new Error("Could not parse message");
-			}
-		};
+	joinChannel(channel) {
+		// fetch(`http://${this.host}:${this.port}/api/channels/join?channel=${channel}&token=${this.token}`, {
+		// 	method: 'PUT',
+		// 	headers: {
+		// 		'Content-Type': 'application/json'
+		// 	}
+		// }).then(response => {
+		// 	if (response.status === 200) {
+		// 		return response.json();
+		// 	}
+		// }).then(data => {
+		// 	this.emit("joinChannel", data);
+		// }).catch(error => {
+		// 	console.log(error);
+		// });
 	}
 
 	leaveChannel(channel) {
@@ -112,20 +163,20 @@ class Client extends EventEmitter {
 	}
 
 	deleteChannel(channel) {
-		// delete channel
-		const channelDeleteRequest = new XMLHttpRequest();
-		channelDeleteRequest.open(
-			"DELETE",
-			`http://${this.host}:${this.port}/api/channels/delete?channel=${channelName}`,
-			true
-		);
-		channelDeleteRequest.onload = function () {
-			const channelDeleteData = JSON.parse(this.response);
-
-			// send client message to chat window
-			appendMessage("Channel deleted: " + channelDeleteData.channelName);
-		};
-		channelDeleteRequest.send();
+		fetch(`http://${this.host}:${this.port}/api/channels/delete?channel=${channel}&token=${this.token}`, {
+			method: 'DELETE',
+			headers: {
+				'Content-Type': 'application/json'
+			}
+		}).then(response => {
+			if (response.status === 200) {
+				return response.json();
+			}
+		}).then(data => {
+			appendMessage("Channel deleted: " + data.channelName);
+		}).catch(error => {
+			console.log(error);
+		});
 	}
 
 	sendMessage(channel, message) {
@@ -133,34 +184,26 @@ class Client extends EventEmitter {
 	}
 
 	createChannel(channel) {
-		// create channel
-		const channelCreateRequest = new XMLHttpRequest();
-		channelCreateRequest.open(
-			"POST",
-			`http://${hostname}:8081/api/channels/create?channel=${channel}&token=${this.token}`,
-			true
-		);
-		channelCreateRequest.onreadystatechange = function () {
-			if (this.readyState == 4 && this.status == 200) {
-				const channelCreateData = JSON.parse(this.response);
-
-				// send client message to chat window        
-				this.EventEmitter.emit("channelCreated", channelCreateData.channelName);
-			} else if (this.readyState == 4 && this.status == 409) {
-				// send client message to chat window
+		fetch(`http://${hostname}:8081/api/channels/create?channel=${channel}&token=${this.token}`, {
+			method: 'POST',
+			headers: {
+				'Content-Type': 'application/json'
+			}
+		}).then(response => {
+			if (response.status === 200) {
+				return response.json();
+			} else if (response.status === 409) {
 				throw new Error(`Channel ${channel} already exists`);
-			} else if (this.readyState == 4 && this.status == 406) {
-				// send client message to chat window
-				throw new Error("Channel name must be alphanumeric andlowercase");
-			} else if (this.readyState == 4 && this.status == 0) {
-				// send client message to chat window
-				throw new Error("Could not connect to server");
+			} else if (response.status === 406) {
+				throw new Error("Channel name must be alphanumeric and lowercase");
 			} else {
-				// send client message to chat window
 				throw new Error("Unknown error");
 			}
-		};
-		channelCreateRequest.send();
+		}).then(data => {
+			this.emit("channelCreated", data.channelName);
+		}).catch(error => {
+			console.log(error);
+		});
 	}
 }
 
