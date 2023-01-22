@@ -6,7 +6,7 @@ This mono-repo contains both the server and client portions of Hammer.
 
 `boiler` is the chat server implementing all server-side API and WS chat functionalities.
 
-`traincar` is the web-based client. Currently it is raw HTML and JavaScript, no fancy libraries.
+`traincar` is the JavaScript API wrapper. Currently [almost] raw JavaScript, no fancy libraries.
 
 ## Installation
 
