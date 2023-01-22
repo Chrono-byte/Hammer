@@ -1,5 +1,9 @@
+"use strict";
+
 /*
  * Hammer - A simple WebSocket-based chat server & client written in JavaScript.
+ *
+ * Copyright (C) 2023 Michael G. <chrono@disilla.org>
  */
 
 // servers
@@ -36,15 +40,15 @@ const users = new Map();
 // import internal deps
 const { snowflakeGen } = require("./util/snowflake");
 
-// server info 
-// MOTD, etc
-env.BOILER_CONFIG = "server-config.json";
-const config_local = path.join(__dirname, env.BOILER_CONFIG);
-
 // listen for connections
 wss.on("connection", (ws, req) => {
 	const url = new URL(req.url, `http://${req.headers.host}`);
 	const token = url.searchParams.get("token");
+
+	// check that token was provided
+	if(!token) {
+		ws.close();
+	}
 
 	// check that the connection is an authorized user
 	const auth = checkUserAuth(token);
@@ -85,6 +89,57 @@ wss.on("connection", (ws, req) => {
 
 	ws.on("message", (message) => {
 
+	});
+});
+
+// route login
+app.post("/api/login", (req, res) => {
+	// get username and password from request
+	const username = req.query.username;
+	const password = req.query.password;
+
+	// check that the username and password have been provided
+	if (username == undefined || password == undefined) {
+		res.status(422).send("Username and password must be provided");
+		return;
+	}
+
+	// check if user exists
+	if (!users.has(username)) {
+		res.status(422).send("User does not exist");
+		return;
+	}
+
+	// check that the user has a hashed password
+	if (users.get(username).password == undefined) {
+		res.status(500).send("User improper");
+		return;
+	}
+
+	checkUser(username, password).then((result) => {
+		if (!result) res.status(411).send("Refused.");
+
+		if (result) {
+			// log successful login
+			console.log(`User ${username} logged in`);
+
+			// get user object
+			const user = users.get(username);
+			const token = generateToken(user.username, user.permissions)
+
+			// generate token
+			users.get(username).token = token;
+
+			// generate payload
+			const loginPayload = {
+				username: user.username,
+				id: user.id,
+				token: token
+			}
+
+			// send token
+			res.status(200).send(loginPayload);
+		}
 	});
 });
 
