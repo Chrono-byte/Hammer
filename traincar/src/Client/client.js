@@ -32,12 +32,20 @@ class Client extends EventEmitter {
 				'Content-Type': 'application/json'
 			}
 		}).then(response => {
-			if (response.status === 401) {
-				console.log("Invalid username or password");
+			if (response.status === 500) {
+				throw new Error("Internal server error");
+			} else if(response.status === 422) {
+				throw new Error("Invalid username or password");
 			} else if (response.status === 200) {
 				return response.json();
 			}
 		}).then(data => {
+			// check that token is valid
+			if (data.token == null) {
+				console.log("Invalid token");
+				return;
+			}
+
 			this.token = data.token;
 
 			// set username and id

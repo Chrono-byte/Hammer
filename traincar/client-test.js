@@ -1,5 +1,5 @@
 const { Client } = require("./src/Client/client");
-const client = new Client("localhost", 8080);
+const client = new Client("192.168.1.26", 8080);
 
 client.on("message", (message) => {
     console.log(message);
