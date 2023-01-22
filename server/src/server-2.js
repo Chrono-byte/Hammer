@@ -153,6 +153,10 @@ var getUserFromToken = (token) => [...users.values()].find((e) => e.token == tok
 var getUserFromID = (id) => [...users.values()].find((e) => e.id == id);
 var checkUserAuth = (token) => getUserFromToken(token) != null;
 
+wss.on("open", () => {
+	console.log("Connection opened");
+});
+
 // listen for connections
 wss.on("connection", (ws, req) => {
 	const url = new URL(req.url, `http://${req.headers.host}`);
@@ -198,6 +202,10 @@ wss.on("connection", (ws, req) => {
 	ws.on("message", (message) => {
 
 	});
+
+	ws.on("close", () => {
+		console.log("Connection closed");
+	})
 });
 
 // route create user
