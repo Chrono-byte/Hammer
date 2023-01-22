@@ -215,8 +215,8 @@ app.post("/api/channels/create", (req, res) => {
 });
 
 // route to delete a channel
-app.delete("/api/channels/delete", (req, res) => {
-	const channelName = req.query.channel;
+app.delete("/api/channels/:id", (req, res) => {
+	const channelName = req.params.id;
 
 	if (!channelName) {
 		res.status(400).send("Channel name not provided");
