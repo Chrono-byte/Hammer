@@ -1,5 +1,5 @@
 const { Client } = require("./src/Client/client");
-const client = new Client("192.168.1.26", 8080);
+const client = new Client("localhost", 8080);
 
 client.on("message", (message) => {
     console.log(message);
@@ -10,16 +10,9 @@ client.on('ready', () => {
     console.log(`Logged in as ${client.username} (${client.id})`);
 });
 
-client.on("joinChannel", (channel) => {
-    console.log(`Joined channel ${channel.channelName}`);
-});
-
-client.on("leaveChannel", (channel) => {
-    console.log(`Left channel ${channel.channelName}`);
-});
-
 client.on("logout", () => {
     console.log("Logged out");
 })
 
-client.login("admin", "password");
+// login
+client.login("admin@disilla.org", "password");

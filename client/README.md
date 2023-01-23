@@ -1,3 +1,0 @@
-# traincar
-
-simple web ui

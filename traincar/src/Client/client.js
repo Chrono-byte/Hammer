@@ -10,9 +10,9 @@
  * Redistribution and use in source and binary forms governed under the terms of the zlib/libpng License with Acknowledgement license.
 */
 
-
 const { WebSocket } = require("ws");
 const { EventEmitter } = require("events");
+
 // hammer client
 class Client extends EventEmitter {
 	constructor(host, port) {
@@ -26,18 +26,20 @@ class Client extends EventEmitter {
 	}
 
 	login(username, password) {
-		fetch(`http://${this.host}:${this.port + 1}/api/users/login?username=${username}&password=${password}`, {
+		fetch(`http://${this.host}:${this.port + 1}/auth/login/email?username=${username}&password=${password}`, {
 			method: 'POST',
 			headers: {
 				'Content-Type': 'application/json'
 			}
 		}).then(response => {
-			if (response.status === 500) {
-				throw new Error("Internal server error");
-			} else if(response.status === 422) {
-				throw new Error("Invalid username or password");
-			} else if (response.status === 200) {
+			if (response.status === 200) {
 				return response.json();
+			} else if (response.status === 500) {
+				throw new Error(`Internal server error ${response.body}`);
+			} else if (response.status === 422) {
+				throw new Error("Invalid username or password");
+			} else {
+				throw new Error(`Unknown error ${response.status}`);
 			}
 		}).then(data => {
 			// check that token is valid
@@ -72,7 +74,8 @@ class Client extends EventEmitter {
 
 			// once the socket is open, emit the ready event
 			this.socket.onopen = (event) => {
-				// WIP
+				// set sequence
+				this.sequence = 0;
 			};
 
 			// when socket is closed, emit the close event
@@ -92,22 +95,44 @@ class Client extends EventEmitter {
 				try {
 					message = JSON.parse(event.data);
 				} catch {
-					// throw new Error("Could not parse message");
+					throw new Error("Could not parse message");
 				}
 
+				// check sequence matches
+				if (message.sequence != (this.sequence + 1)) {
+					console.log(`Sequence mismatch, expected ${this.sequence}, got ${message.sequence}`);
+					return;
+				}
+
+				// update sequence
+				this.sequence += 1;
+
 				switch (message.type) {
-					case "payload":
-						if (message.content == "Authorized") {
+					case "HELLO":
+						if (message.data.message == "Authorized" && message.op == 10) {
+							// send HELLO
 							this.socket.send(JSON.stringify({
-								version: 1,
-								type: "payload"
+								op: 11,
+								data: {
+									heartbeat_interval: 1000
+								},
+								sequence: this.sequence += 1,
+								type: "IDENTIFY"
 							}))
 
 							// emit the ready event
 							this.emit("ready");
 						}
 						break;
-					case "heartbeat":
+					case "HEARTBEAT":
+						// send heartbeat ack
+						this.socket.send(JSON.stringify({
+							op: 11,
+							data: {},
+							sequence: this.sequence += 1,
+							type: "HEARTBEAT_ACK"
+						}))
+
 						this.emit("heartbeat", message);
 						break;
 					case "message":
@@ -144,6 +169,8 @@ class Client extends EventEmitter {
 						console.log(`Unknown message type from server, most likely a bug or an unimplemented feature ${message.type}`);
 						break;
 				}
+
+				// console.log(`[message] Data received from server: ${event.data}`);
 			};
 		});
 	}
