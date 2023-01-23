@@ -18,9 +18,14 @@ class Client extends EventEmitter {
 	constructor(host, port) {
 		super();
 
+		// set host and port
 		this.host = host;
 		this.port = port;
 
+		// client user
+		// this.user = new User();
+
+		// initialize data structures
 		this.channels = new Map();
 		this.users = new Map();
 	}
@@ -139,7 +144,17 @@ class Client extends EventEmitter {
 						this.emit("message", message);
 						break;
 					case "joinChannel":
-						this.emit("joinChannel", message);
+						// add channel to channels map
+						this.channels.set(message.channel.id, {
+							id: message.channel.id,
+							name: message.channel.name,
+							description: message.channel.description,
+							owner: message.channel.owner,
+							users: message.channel.users
+						});
+
+						// emit the joinChannel event with the channel
+						this.emit("joinChannel", this.channels.get(message.channel.id));
 						break;
 					case "leaveChannel":
 						this.emit("leaveChannel", message);

@@ -11,8 +11,8 @@
 */
 
 // Client
-exports.Client = require("./Client/client").Traincar;
+exports.Client = require("./Client/client").Client;
 
-// Structures
-exports.Channel = require("./Client/channel").Channel;
-exports.User = require("./User/user").User;
+// // Structures
+// exports.Channel = require("./Client/channel").Channel;
+// exports.User = require("./User/user").User;
